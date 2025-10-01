@@ -51,20 +51,29 @@ fi
 
 print_status "Detected OS: $OS"
 
-# Check Python
+# Update system and install dependencies
+print_info "Updating system packages..."
+apt update -y
+
+# Check and install Python3
 if ! command -v python3 &> /dev/null; then
     print_info "Installing Python3..."
-    apt update && apt install -y python3 python3-pip
+    apt install -y python3
 fi
-
 print_status "Python3 is installed"
 
-# Check curl
+# Check and install pip3
+if ! command -v pip3 &> /dev/null; then
+    print_info "Installing pip3..."
+    apt install -y python3-pip
+fi
+print_status "pip3 is installed"
+
+# Check and install curl
 if ! command -v curl &> /dev/null; then
     print_info "Installing curl..."
     apt install -y curl
 fi
-
 print_status "Curl is installed"
 
 # Create application directory
@@ -72,17 +81,15 @@ APP_DIR="/opt/monitorMoon"
 print_info "Creating application directory: $APP_DIR"
 mkdir -p $APP_DIR
 
-# Download main script
+# Download scripts
 print_info "Downloading monitor script..."
-curl -sL https://raw.githubusercontent.com/your-repo/monitorMoon/main/monitor.py -o $APP_DIR/monitor.py
+curl -sL https://raw.githubusercontent.com/SevinEW/monitorMoon/main/monitor.py -o $APP_DIR/monitor.py
 
-# Download requirements
 print_info "Downloading requirements..."
-curl -sL https://raw.githubusercontent.com/your-repo/monitorMoon/main/requirements.txt -o $APP_DIR/requirements.txt
+curl -sL https://raw.githubusercontent.com/SevinEW/monitorMoon/main/requirements.txt -o $APP_DIR/requirements.txt
 
-# Download setup script
 print_info "Downloading setup script..."
-curl -sL https://raw.githubusercontent.com/your-repo/monitorMoon/main/setup.py -o $APP_DIR/setup.py
+curl -sL https://raw.githubusercontent.com/SevinEW/monitorMoon/main/setup.py -o $APP_DIR/setup.py
 
 # Make scripts executable
 chmod +x $APP_DIR/monitor.py
@@ -90,11 +97,20 @@ chmod +x $APP_DIR/setup.py
 
 # Install Python requirements
 print_info "Installing Python dependencies..."
-pip3 install -r $APP_DIR/requirements.txt
+pip3 install -q python-telegram-bot paramiko psutil schedule pytz
+print_status "Python dependencies installed"
 
 # Run setup
 print_info "Starting interactive setup..."
-python3 $APP_DIR/setup.py
+cd $APP_DIR
+python3 setup.py
+
+if [ $? -eq 0 ]; then
+    print_status "Setup completed successfully"
+else
+    print_error "Setup failed. Please check the errors above."
+    exit 1
+fi
 
 # Create systemd service
 print_info "Creating system service..."
@@ -140,6 +156,7 @@ print_status "🎉 Installation completed successfully!"
 print_status "📁 Application directory: $APP_DIR"
 print_status "🔧 Service name: monitorMoon"
 print_status "📋 Check status: systemctl status monitorMoon"
+print_status "📝 View logs: journalctl -u monitorMoon -f"
 print_status "🗑️ Uninstall: $APP_DIR/uninstall.sh"
 
 echo -e "${GREEN}
