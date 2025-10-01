@@ -8,6 +8,7 @@ import json
 import os
 import sys
 from typing import Dict, List
+import asyncio
 
 CONFIG_FILE = "/opt/monitorMoon/config.json"
 
@@ -99,11 +100,16 @@ def test_telegram_connection(config: Dict) -> bool:
     print("\n🔷 Testing Telegram connection...")
     try:
         from telegram import Bot
-        bot = Bot(token=config['telegram']['bot_token'])
-        bot.send_message(
-            chat_id=config['telegram']['chat_id'],
-            text="✅ **Monitor Moon Test**\n\nTest message from Monitor Moon setup!\n\nConfiguration completed successfully! 🚀"
-        )
+        import asyncio
+        
+        async def send_test_message():
+            bot = Bot(token=config['telegram']['bot_token'])
+            await bot.send_message(
+                chat_id=config['telegram']['chat_id'],
+                text="✅ **Monitor Moon Test**\n\nTest message from Monitor Moon setup!\n\nConfiguration completed successfully! 🚀"
+            )
+        
+        asyncio.run(send_test_message())
         print("✅ Telegram connection successful!")
         return True
     except Exception as e:
