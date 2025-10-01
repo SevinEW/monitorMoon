@@ -40,7 +40,7 @@ class ServerMonitor:
         self.config = config
         self.bot = Bot(token=config['telegram']['bot_token'])
         self.chat_id = config['telegram']['chat_id']
-        self.interval = config['monitoring']['interval_minutes']
+        self.interval = 10  # تغییر به ۱۰ دقیقه
         self.tehran_tz = pytz.timezone('Asia/Tehran')
         
         # ذخیره آخرین مقادیر برای حساب کردن پهنای باند
@@ -94,7 +94,7 @@ class ServerMonitor:
         rx_per_sec = (current_rx - last['rx']) / time_diff if time_diff > 0 else 0
         tx_per_sec = (current_tx - last['tx']) / time_diff if time_diff > 0 else 0
         
-        # تبدیل به بایت در ۱۵ دقیقه
+        # تبدیل به بایت در ۱۰ دقیقه
         rx_usage = int(rx_per_sec * self.interval * 60)
         tx_usage = int(tx_per_sec * self.interval * 60)
         
@@ -183,6 +183,10 @@ class ServerMonitor:
     def send_telegram_message(self, message: str):
         """Send message to Telegram"""
         try:
+            # ایجاد event loop جدید برای رفع خطا
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
             async def send_async():
                 await self.bot.send_message(
                     chat_id=self.chat_id,
@@ -190,10 +194,14 @@ class ServerMonitor:
                     parse_mode='Markdown'
                 )
             
-            asyncio.run(send_async())
+            loop.run_until_complete(send_async())
+            loop.close()
             logger.info("Telegram message sent successfully")
+            
         except TelegramError as e:
             logger.error(f"Failed to send Telegram message: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
 
     def generate_monitoring_report(self) -> str:
         """Generate monitoring report"""
@@ -279,7 +287,7 @@ class ServerMonitor:
 
     def start_scheduler(self):
         """Start the scheduling system"""
-        # Schedule regular monitoring
+        # Schedule regular monitoring - هر ۱۰ دقیقه
         schedule.every(self.interval).minutes.do(self.run_monitoring)
         
         # Schedule daily report at midnight
